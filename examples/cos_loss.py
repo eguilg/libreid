@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 sys.path.append("../")
 from reid import datasets
 from reid import models
+from reid.loss import CosLoss
 from reid.dist_metric import DistanceMetric
 from reid.trainers import Trainer
 from reid.evaluators import Evaluator
@@ -86,7 +87,7 @@ def main(args):
                  args.combine_trainval)
 
     # Create model
-    model = models.create(args.arch, num_features=args.features,
+    model = models.create(args.arch, num_features=args.features, norm=True,
                           dropout=args.dropout, num_classes=num_classes)
 
     # Load from checkpoint
@@ -114,7 +115,7 @@ def main(args):
         return
 
     # Criterion
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = CosLoss().cuda()
 
     # Optimizer
     if hasattr(model.module, 'base'):
@@ -147,7 +148,7 @@ def main(args):
         trainer.train(epoch, train_loader, optimizer)
         if epoch < args.start_save:
             continue
-        top1 = evaluator.evaluate(val_loader, dataset.val, dataset.val)
+        top1 = evaluator.evaluate(val_loader, dataset.val, dataset.val, metric)
 
         is_best = top1 > best_top1
         best_top1 = max(top1, best_top1)
@@ -191,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--features', type=int, default=1024)
     parser.add_argument('--dropout', type=float, default=0.5)
     # optimizer
-    parser.add_argument('--lr', type=float, default=0.1,
+    parser.add_argument('--lr', type=float, default=0.01,
                         help="learning rate of new parameters, for pretrained "
                              "parameters it is 10 times smaller than this")
     parser.add_argument('--momentum', type=float, default=0.9)
@@ -206,8 +207,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--print-freq', type=int, default=1)
     # metric learning
-    parser.add_argument('--dist-metric', type=str, default='euclidean',
-                        choices=['euclidean', 'kissme'])
+    parser.add_argument('--dist-metric', type=str, default='cosine',
+                        choices=['euclidean', 'kissme', 'cosine'])
     # misc
     working_dir = osp.dirname(osp.abspath(__file__))
     parser.add_argument('--data-dir', type=str, metavar='PATH',

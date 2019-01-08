@@ -190,8 +190,8 @@ if __name__ == '__main__':
     # model
     parser.add_argument('-a', '--arch', type=str, default='resnet50',
                         choices=models.names())
-    parser.add_argument('--features', type=int, default=128)
-    parser.add_argument('--dropout', type=float, default=0)
+    parser.add_argument('--features', type=int, default=512)
+    parser.add_argument('--dropout', type=float, default=0.5)
     # loss
     parser.add_argument('--margin', type=float, default=0.5,
                         help="margin of the triplet loss, default: 0.5")

@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
+import torch
 from torch import nn
+from torch.nn.parameter import Parameter
 from torch.nn import functional as F
 from torch.nn import init
 import torchvision
@@ -44,7 +46,7 @@ class ResNet(nn.Module):
             # Append new layers
             if self.has_embedding:
                 self.feat = nn.Linear(out_planes, self.num_features)
-                self.feat_bn = nn.BatchNorm1d(self.num_features)
+                self.feat_bn = nn.BatchNorm1d(self.num_features,  )
                 init.kaiming_normal(self.feat.weight, mode='fan_out')
                 init.constant(self.feat.bias, 0)
                 init.constant(self.feat_bn.weight, 1)
@@ -55,9 +57,11 @@ class ResNet(nn.Module):
             if self.dropout > 0:
                 self.drop = nn.Dropout(self.dropout)
             if self.num_classes > 0:
-                self.classifier = nn.Linear(self.num_features, self.num_classes)
-                init.normal(self.classifier.weight, std=0.001)
-                init.constant(self.classifier.bias, 0)
+                #self.classifier = nn.Linear(self.num_features, self.num_classes)
+                #init.normal(self.classifier.weight, std=0.001)
+                #init.constant(self.classifier.bias, 0)
+                self.classifier_w = Parameter(torch.Tensor(self.num_features, self.num_classes))
+                init.normal(self.classifier_w, std=0.001)
 
         if not self.pretrained:
             self.reset_params()
@@ -84,7 +88,11 @@ class ResNet(nn.Module):
         if self.dropout > 0:
             x = self.drop(x)
         if self.num_classes > 0:
-            x = self.classifier(x)
+            # x = self.classifier(x)
+            if self.norm:
+                x = torch.mm(x, F.normalize(self.classifier_w, dim=0))
+            else:
+                x = torch.mm(x, self.classifier_w)
         return x
 
     def reset_params(self):

@@ -34,3 +34,33 @@ class TripletLoss(nn.Module):
         loss = self.ranking_loss(dist_an, dist_ap, y)
         prec = (dist_an.data > dist_ap.data).sum() * 1. / y.size(0)
         return loss, prec
+
+
+class TripletCosLoss(nn.Module):
+    def __init__(self, margin=0.5):
+        super(TripletCosLoss, self).__init__()
+        self.margin = margin
+        self.ranking_loss = nn.MarginRankingLoss(margin=margin)
+
+    def forward(self, inputs, targets):
+        n = inputs.size(0)
+        # Compute pairwise cosine distance
+        mods = torch.norm(inputs, 2, 1).unsqueeze(-1).expand_as(inputs)
+        inputs = inputs.div(mods)
+        dist = 1.0 - torch.mm(inputs, inputs.t())
+        # For each anchor, find the hardest positive and negative
+        mask = targets.expand(n, n).eq(targets.expand(n, n).t())
+        dist_ap, dist_an = [], []
+        for i in range(n):
+            dist_ap.append(dist[i][mask[i]].max())
+            dist_an.append(dist[i][mask[i] == 0].min())
+        dist_ap = torch.stack(dist_ap)
+        dist_an = torch.stack(dist_an)
+        # Compute ranking hinge loss
+        y = dist_an.data.new()
+        y.resize_as_(dist_an.data)
+        y.fill_(1)
+        y = Variable(y)
+        loss = self.ranking_loss(dist_an, dist_ap, y)
+        prec = (dist_an.data > dist_ap.data).sum() * 1. / y.size(0)
+        return loss, prec

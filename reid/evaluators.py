@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict
 
 import torch
-
+from .metric_learning.cosine import Cosine
 from .evaluation_metrics import cmc, mean_ap
 from .feature_extraction import extract_cnn_feature
 from .utils.meters import AverageMeter
@@ -21,7 +21,7 @@ def extract_features(model, data_loader, print_freq=1, metric=None):
     for i, (imgs, fnames, pids, _, _) in enumerate(data_loader):
         data_time.update(time.time() - end)
 
-        outputs = extract_cnn_feature(model, imgs)
+        outputs = extract_cnn_feature(model, imgs, [model.module.feat_bn])[0]
         for fname, output, pid in zip(fnames, outputs, pids):
             features[fname] = output
             labels[fname] = pid
@@ -59,9 +59,12 @@ def pairwise_distance(features, query=None, gallery=None, metric=None):
     if metric is not None:
         x = metric.transform(x)
         y = metric.transform(y)
-    dist = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
-           torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
-    dist.addmm_(1, -2, x, y.t())
+    if metric is not None and isinstance(metric.metric, Cosine):
+        dist = 1 - torch.mm(x, y.t())
+    else:
+        dist = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
+               torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
+        dist.addmm_(1, -2, x, y.t())
     return dist
 
 

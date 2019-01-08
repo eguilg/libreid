@@ -5,7 +5,7 @@ import torch
 from torch.autograd import Variable
 
 from .evaluation_metrics import accuracy
-from .loss import OIMLoss, TripletLoss
+from .loss import OIMLoss, TripletLoss, CosLoss
 from .utils.meters import AverageMeter
 
 
@@ -68,7 +68,7 @@ class Trainer(BaseTrainer):
 
     def _forward(self, inputs, targets):
         outputs = self.model(*inputs)
-        if isinstance(self.criterion, torch.nn.CrossEntropyLoss):
+        if isinstance(self.criterion, torch.nn.CrossEntropyLoss) or isinstance(self.criterion, CosLoss):
             loss = self.criterion(outputs, targets)
             prec, = accuracy(outputs.data, targets.data)
             prec = prec[0]
