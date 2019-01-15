@@ -96,9 +96,10 @@ def unique(tensor):
     tensor_res.copy_(unique_tensor)
     return tensor_res
 
-def write_results(prediction, confidence, num_classes, ignore_classes = [], nms = True, nms_conf = 0.4):
-    ignore_classes = np.array(ignore_classes)
-    prediction[:,:,ignore_classes+5] = 0
+def write_results(prediction, confidence, target_classes_idxs, nms = True, nms_conf = 0.4):
+    target_classes_idxs = np.array(target_classes_idxs)
+    num_classes = len(target_classes_idxs)
+    prediction = torch.cat([prediction[:,:,:5], prediction[:,:,target_classes_idxs+5]], -1)
     total_box_num = prediction.size()[0]*prediction.size()[1]
     # print(prediction[:,:,4].size(), prediction[:,:,5:].size())
     pred_conf, _ = torch.max(torch.bmm(torch.reshape(prediction[:,:,5:],(total_box_num, num_classes, 1)),
@@ -212,7 +213,7 @@ def write_results(prediction, confidence, num_classes, ignore_classes = [], nms 
             else:
                 out = torch.cat(seq,1)
                 output = torch.cat((output,out))
-    
+
     return output
 
 #!/usr/bin/env python3
