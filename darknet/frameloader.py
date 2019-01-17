@@ -1,9 +1,11 @@
 import cv2
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
+from torchvision import transforms
 
 
 class VideoDataset(Dataset):
 	def __init__(self, file_path, time_interval=0, transform=None):
+
 		try:
 			self.cv_cap = cv2.VideoCapture(file_path)
 		except:
@@ -11,6 +13,7 @@ class VideoDataset(Dataset):
 		if not self.cv_cap.isOpened():
 			raise FileNotFoundError('Error open video file %s'.format(file_path))
 
+		self.file_path = file_path
 		self._transform = transform
 
 		self.frame_count = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -44,6 +47,7 @@ class VideoDataset(Dataset):
 			if ret:  # if got a frame
 				if i == 0:
 					time_stamp = self._curr_frame_count / self.fps
+					frame = frame[:, :, -1::-1].copy()  # (h, w, (bgr)) -> (h, w, (rgb))
 					out_frame_org = frame
 				self._curr_frame_count += 1
 			else:
