@@ -91,7 +91,7 @@ class PRID450S(BaseImageDataset):
         fpath = osp.join(self.dataset_dir, 'prid_450s.zip')
 
         print("Downloading PRID450S dataset")
-        urllib.urlretrieve(self.dataset_url, fpath)
+        urllib.request.urlretrieve(self.dataset_url, fpath)
 
         print("Extracting files")
         zip_ref = zipfile.ZipFile(fpath, 'r')

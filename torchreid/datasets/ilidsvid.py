@@ -81,7 +81,7 @@ class iLIDSVID(BaseVideoDataset):
         fpath = osp.join(self.dataset_dir, osp.basename(self.dataset_url))
 
         print("Downloading iLIDS-VID dataset")
-        urllib.urlretrieve(self.dataset_url, fpath)
+        urllib.request.urlretrieve(self.dataset_url, fpath)
 
         print("Extracting files")
         tar = tarfile.open(fpath)

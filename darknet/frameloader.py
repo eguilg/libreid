@@ -24,6 +24,8 @@ class VideoDataset(Dataset):
 		if self.time_interval != 0:
 			self._frame_interval = int(self.fps * self.time_interval)
 
+		self._curr_frame_count = 0
+
 		print('-' * 80)
 		print('Video File: %s\n'
 			  'Frame Count: %d\n'
@@ -35,22 +37,22 @@ class VideoDataset(Dataset):
 	def __getitem__(self, item):
 		out_frame_org = None
 		out_frame = None
+		time_stamp = self._curr_frame_count / self.fps
 		for i in range(self._frame_interval):
+			# read one frame from video
 			ret, frame = self.cv_cap.read()
-			if ret:
+			if ret:  # if got a frame
 				if i == 0:
+					time_stamp = self._curr_frame_count / self.fps
 					out_frame_org = frame
-				else:
-					continue
+				self._curr_frame_count += 1
 			else:
 				break
 		if self._transform is not None:
 			out_frame = self._transform(out_frame_org)
-			return out_frame_org, out_frame
+			return time_stamp, out_frame_org, out_frame
 		else:
-			return out_frame_org
+			return time_stamp, out_frame_org
 
 	def __len__(self):
 		return (self.frame_count - 10) // self._frame_interval
-
-
