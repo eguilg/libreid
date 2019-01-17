@@ -126,7 +126,9 @@ def detect_batch(input_batch, origin_batch, detector, target_names, CUDA, confid
 	out_idxs = []
 	ToPIL = transforms.ToPILImage()
 	for idx, bbox in zip(idxs, bboxes):
-		if bbox[3] - bbox[1] > 0 and bbox[2] - bbox[0] > 0:
+		w = bbox[2] - bbox[0]
+		h = bbox[3] - bbox[1]
+		if w > 0 and h > 0 and h / w >= 1.2:
 			org_img = ToPIL(origin_batch[idx])
 			crop_img = org_img.crop(bbox)
 
@@ -164,7 +166,7 @@ def main():
 				out_imgs.save(detection_path)
 				print('Saved detection at %d s to %s' % (timestamp[idx], detection_path))
 				timestamp_records[timestamp[idx]] += 1
- 
+
 		n_detection = sum(timestamp_records.values())
 		print('Detected %d instances in %d detections' % (n_detection, len(timestamp_records)))
 		print('-' * 80)
