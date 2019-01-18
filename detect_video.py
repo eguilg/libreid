@@ -34,7 +34,7 @@ def arg_parse():
 						help="path to class names file")
 
 	#  others
-	parser.add_argument('--batch-size', default=20, type=int,
+	parser.add_argument('--batch-size', default=10, type=int,
 						help="batch size")
 	parser.add_argument('--reso', default=416, type=int,
 						help="input resolution")
@@ -45,6 +45,8 @@ def arg_parse():
 	parser.add_argument('--nms_conf', default=0.4, type=float,
 						help="nms confidence")
 
+	parser.add_argument('--half', action='store_true',
+						help="half the model data type")
 	parser.add_argument('--use-cpu', action='store_true',
 						help="use cpu")
 	parser.add_argument('--gpu-devices', default='0', type=str,
@@ -109,6 +111,8 @@ def init(args):
 def detect_batch(input_batch, origin_batch, detector, target_names, CUDA, confidence, nms_conf):
 	#  get origin w h
 	im_dim = torch.FloatTensor([origin_batch.size(2), origin_batch.size(1)])
+	if detector.model.is_half:
+		im_dim = im_dim.half()
 	if CUDA:
 		im_dim = im_dim.cuda()
 	output = detector.detect_batch(input_batch, target_names, CUDA, confidence, nms_conf)
@@ -141,9 +145,12 @@ def detect_batch(input_batch, origin_batch, detector, target_names, CUDA, confid
 def main():
 	args = arg_parse()
 	CUDA = not args.use_cpu
+	HALF = args.half
 	target_names = ['person']
 	detector, data_loaders, target_dir = init(args)
 
+	if HALF:
+		detector.half()
 	if CUDA:
 		detector.cuda()
 
@@ -154,9 +161,11 @@ def main():
 		vfile_name = ''.join(osp.basename(vfile_path).split('.')[:-1])
 		timestamp_records = defaultdict(int)
 		for timestamp, org_batch, input_batch in loader:
+			input_batch = input_batch.float()
+			if HALF:
+				input_batch = input_batch.half()
 			if CUDA:
 				input_batch = input_batch.cuda()
-			input_batch = input_batch.float()
 			timestamp = timestamp.numpy().astype(int).tolist()
 			idxs, out_imgs = detect_batch(input_batch, org_batch, detector, target_names, CUDA, args.conf,
 										  args.nms_conf)

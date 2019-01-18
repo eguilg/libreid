@@ -44,6 +44,10 @@ class Detector(object):
 	def cuda(self):
 		self.model = self.model.cuda()
 
+	def half(self):
+		self.model = self.model.half()
+		self.model.is_half = True
+
 	def eval(self):
 		self.model.eval()
 
@@ -56,7 +60,10 @@ class Detector(object):
 
 		self.model.eval()
 		output = self.model(batch_img, CUDA)  # bs, a*a*15(a*a area a=in_size//32, 15 anchors), 5 (xywh c)
-		output = write_results(output, confidence, target_class_idxs, 0 < nms_conf < 1, nms_conf)
+		if self.model.is_half:
+			output = write_results_half(output, confidence, target_class_idxs, 0 < nms_conf < 1, nms_conf)
+		else:
+			output = write_results(output, confidence, target_class_idxs, 0 < nms_conf < 1, nms_conf)
 
 		return output
 

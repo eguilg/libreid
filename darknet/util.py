@@ -7,7 +7,7 @@ from torch.autograd import Variable
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from .bbox import bbox_iou
+from .bbox import bbox_iou, bbox_iou_half
 
 
 def count_parameters(model):
@@ -225,10 +225,11 @@ Created on Sat Mar 24 00:12:16 2018
 def predict_transform_half(prediction, inp_dim, anchors, num_classes, CUDA=True):
 	batch_size = prediction.size(0)
 	stride = inp_dim // prediction.size(2)
-
+	grid_size = inp_dim // stride
 	bbox_attrs = 5 + num_classes
 	num_anchors = len(anchors)
-	grid_size = inp_dim // stride
+
+	anchors = [(a[0] / stride, a[1] / stride) for a in anchors]
 
 	prediction = prediction.view(batch_size, bbox_attrs * num_anchors, grid_size * grid_size)
 	prediction = prediction.transpose(1, 2).contiguous()
@@ -264,37 +265,48 @@ def predict_transform_half(prediction, inp_dim, anchors, num_classes, CUDA=True)
 	prediction[:, :, 2:4] = torch.exp(prediction[:, :, 2:4]) * anchors
 
 	# Softmax the class scores
-	prediction[:, :, 5: 5 + num_classes] = nn.Softmax(-1)(Variable(prediction[:, :, 5: 5 + num_classes])).data
+	prediction[:, :, 5: 5 + num_classes] = nn.Softmax(-1)(Variable(prediction[:, :, 5: 5 + num_classes]))
 
 	prediction[:, :, :4] *= stride
 
 	return prediction
 
 
-def write_results_half(prediction, confidence, num_classes, ignore_classes=[], nms=True, nms_conf=0.4):
-	ignore_classes = np.array(ignore_classes)
-	prediction[:, :, ignore_classes + 5] = 0
+def write_results_half(prediction, confidence, target_classes_idxs, nms=True, nms_conf=0.4):
+	target_classes_idxs = np.array(target_classes_idxs)
+	num_classes = len(target_classes_idxs)
+	prediction = torch.cat([prediction[:, :, :5], prediction[:, :, target_classes_idxs + 5]], -1)
 	total_box_num = prediction.size()[0] * prediction.size()[1]
 	# print(prediction[:,:,4].size(), prediction[:,:,5:].size())
-	pred_conf, _ = torch.max(torch.bmm(torch.reshape(prediction[:, :, 5:], (total_box_num, 80, 1)),
+	pred_conf, _ = torch.max(torch.bmm(torch.reshape(prediction[:, :, 5:], (total_box_num, num_classes, 1)),
 									   torch.reshape(prediction[:, :, 4], (total_box_num, 1, 1))), 1)
-	pred_conf = torch.sqrt(pred_conf)
-	conf_mask = torch.reshape((pred_conf > confidence), prediction.size()[:2]).float().unsqueeze(2)
+	pred_conf = torch.sqrt(pred_conf).half()
+	conf_mask = torch.reshape((pred_conf > confidence), prediction.size()[:2]).float().unsqueeze(2).half()
+
 	# print(conf_mask)
 	# max_target_conf, _ = torch.max(prediction[:, :, 5:], 2)
 	# class_mask = (max_target_conf > confidence).float().unsqueeze(2)
+	# print(class_mask)
+	prediction = prediction * conf_mask
+
+
 
 	try:
 		ind_nz = torch.nonzero(prediction[:, :, 4]).transpose(0, 1).contiguous()
 	except:
 		return 0
 
-	box_a = prediction.new(prediction.shape)
-	box_a[:, :, 0] = (prediction[:, :, 0] - prediction[:, :, 2] / 2)
-	box_a[:, :, 1] = (prediction[:, :, 1] - prediction[:, :, 3] / 2)
-	box_a[:, :, 2] = (prediction[:, :, 0] + prediction[:, :, 2] / 2)
-	box_a[:, :, 3] = (prediction[:, :, 1] + prediction[:, :, 3] / 2)
-	prediction[:, :, :4] = box_a[:, :, :4]
+	# box_a = prediction.new(prediction.shape)
+	# box_a[:,:,0] = (prediction[:,:,0] - prediction[:,:,2]/2)
+	# box_a[:,:,1] = (prediction[:,:,1] - prediction[:,:,3]/2)
+	# box_a[:,:,2] = (prediction[:,:,0] + prediction[:,:,2]/2)
+	# box_a[:,:,3] = (prediction[:,:,1] + prediction[:,:,3]/2)
+	# prediction[:,:,:4] = box_a[:,:,:4]
+
+	prediction[:, :, 0] = (prediction[:, :, 0] - prediction[:, :, 2] / 2)
+	prediction[:, :, 1] = (prediction[:, :, 1] - prediction[:, :, 3] / 2)
+	prediction[:, :, 2] = (prediction[:, :, 0] + prediction[:, :, 2])
+	prediction[:, :, 3] = (prediction[:, :, 1] + prediction[:, :, 3])
 
 	batch_size = prediction.size(0)
 
@@ -317,20 +329,22 @@ def write_results_half(prediction, confidence, num_classes, ignore_classes=[], n
 		# Get rid of the zero entries
 		non_zero_ind = (torch.nonzero(image_pred[:, 4]))
 		try:
-			image_pred_ = image_pred[non_zero_ind.squeeze(), :]
+			image_pred_ = image_pred[non_zero_ind.squeeze(), :].view(-1, 7)
 		except:
 			continue
 
 		# Get the various classes detected in the image
-		img_classes = unique(image_pred_[:, -1].long()).half()
-
+		try:
+			img_classes = unique(image_pred_[:, -1]).half()
+		except:
+			continue
 		# WE will do NMS classwise
 		for cls in img_classes:
 			# get the detections with one particular class
 			cls_mask = image_pred_ * (image_pred_[:, -1] == cls).half().unsqueeze(1)
 			class_mask_ind = torch.nonzero(cls_mask[:, -2]).squeeze()
 
-			image_pred_class = image_pred_[class_mask_ind]
+			image_pred_class = image_pred_[class_mask_ind].view(-1, 7)
 
 			# sort the detections such that the entry with the maximum objectness
 			# confidence is at the top
@@ -345,7 +359,7 @@ def write_results_half(prediction, confidence, num_classes, ignore_classes=[], n
 					# Get the IOUs of all boxes that come after the one we are looking at
 					# in the loop
 					try:
-						ious = bbox_iou(image_pred_class[i].unsqueeze(0), image_pred_class[i + 1:])
+						ious = bbox_iou_half(image_pred_class[i].unsqueeze(0), image_pred_class[i + 1:])
 					except ValueError:
 						break
 
@@ -358,7 +372,7 @@ def write_results_half(prediction, confidence, num_classes, ignore_classes=[], n
 
 					# Remove the non-zero entries
 					non_zero_ind = torch.nonzero(image_pred_class[:, 4]).squeeze()
-					image_pred_class = image_pred_class[non_zero_ind]
+					image_pred_class = image_pred_class[non_zero_ind].view(-1, 7)
 
 			# Concatenate the batch_id of the image to the detection
 			# this helps us identify which image does the detection correspond to
