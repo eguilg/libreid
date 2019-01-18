@@ -1,0 +1,56 @@
+---------------------------------------------xent+htri----------------------------------------
+python train_imgreid_xent_htri.py \
+--root /home/zydq/Datasets/reid \
+-s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids \
+-t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids sensereid \
+-a se_resnet50_fc512 \
+--train-sampler RandomIdentitySampler \
+--train-batch-size 64 \
+--eval-freq 3 \
+--save-dir log/se-resnet50-all-xent-htri \
+--gpu-devices 0 \
+
+---------------------------------------------xent---------------------------------------------
+python train_imgreid_xent.py \
+--root /home/zydq/Datasets/reid \
+-s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids \
+-t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids sensereid \
+-a se_resnet50_fc512 \
+--train-batch-size 64 \
+--eval-freq 3 \
+--save-dir log/se-resnet50-all-xent \
+--gpu-devices 0 \
+
+---------------------------detect-----------------------------------------------------
+python detect_video.py \
+-s /home/zydq/Datasets/zydq-reid-video/ \
+-t /home/zydq/Datasets/reid/zydq/detections_half/ \
+--cfg-path ./demo/yolo/cfg/yolov3.cfg \
+--weight-path ./demo/yolo/weights/yolov3.weights \
+--names-path ./demo/yolo/data/coco.names \
+--file-filters .mp4 \
+--half \
+
+---------------------------------reid--------------------------------------------------
+python train_imgreid_xent_htri.py \
+--evaluate \
+--visualize-ranks \
+--root /home/zydq/Datasets/reid \
+-s market1501 \
+-t zydq \
+-a se_resnet50_fc512 \
+--test-batch-size 100 \
+--save-dir log/se-resnet50-all-xent-htri \
+--load-weights log/se-resnet50-all-xent-htri/checkpoint_ep60.pth.tar \
+--gpu-devices 0 \
+
+
+2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_392_0.png
+2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_320_0.png 李冬
+2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_316_0.png 李冬
+2号楼电梯口_2号一楼大厅_20190107121913_20190107124511_1198772_200_0.png 李冬
+2号楼电梯口_2号一楼大厅_20190107121913_20190107124511_1198772_204_3.png 朱康健
+2号楼电梯口_2号一楼大厅_20190107121913_20190107124511_1198772_432_1.png 刘燕
+2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_312_3.png
+2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_316_2.png
+2号楼电梯口_2号一楼大厅_20190107121913_20190107124511_1198772_176_0.png
