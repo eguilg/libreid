@@ -2,7 +2,7 @@ import argparse
 import os
 import os.path as osp
 from collections import defaultdict
-from darknet.frameloader import VideoDataset
+from darknet.frameloader import VideoDataset, my_collate
 from darknet.detector import Detector
 from darknet.preprocess import prep_image
 import numpy as np
@@ -102,7 +102,9 @@ def init(args):
 	data_loaders = [DataLoader(VideoDataset(file_path=vpath,
 											time_interval=args.time_interval,
 											transform=detector.transforms),
-							   batch_size=args.batch_size)
+							   batch_size=args.batch_size,
+							   collate_fn=my_collate
+							   )
 					for vpath in source_paths]
 
 	return detector, data_loaders, target_dir
@@ -160,21 +162,24 @@ def main():
 		print('Detecting file: %s' % vfile_path)
 		vfile_name = ''.join(osp.basename(vfile_path).split('.')[:-1])
 		timestamp_records = defaultdict(int)
-		for timestamp, org_batch, input_batch in loader:
-			input_batch = input_batch.float()
-			if HALF:
-				input_batch = input_batch.half()
-			if CUDA:
-				input_batch = input_batch.cuda()
-			timestamp = timestamp.numpy().astype(int).tolist()
-			idxs, out_imgs = detect_batch(input_batch, org_batch, detector, target_names, CUDA, args.conf,
-										  args.nms_conf)
-			for idx, out_imgs in zip(idxs, out_imgs):
-				detection_name = '_'.join([vfile_name, str(timestamp[idx]), str(timestamp_records[timestamp[idx]])])
-				detection_path = osp.join(target_dir, detection_name + '.png')
-				out_imgs.save(detection_path)
-				print('Saved detection at %d s to %s' % (timestamp[idx], detection_path))
-				timestamp_records[timestamp[idx]] += 1
+		try:
+			for timestamp, org_batch, input_batch in loader:
+				input_batch = input_batch.float()
+				if HALF:
+					input_batch = input_batch.half()
+				if CUDA:
+					input_batch = input_batch.cuda()
+				timestamp = timestamp.numpy().astype(int).tolist()
+				idxs, out_imgs = detect_batch(input_batch, org_batch, detector, target_names, CUDA, args.conf,
+											  args.nms_conf)
+				for idx, out_imgs in zip(idxs, out_imgs):
+					detection_name = '_'.join([vfile_name, str(timestamp[idx]), str(timestamp_records[timestamp[idx]])])
+					detection_path = osp.join(target_dir, detection_name + '.png')
+					out_imgs.save(detection_path)
+					print('Saved detection at %d s to %s' % (timestamp[idx], detection_path))
+					timestamp_records[timestamp[idx]] += 1
+		except Exception:
+			continue
 
 		n_detection = sum(timestamp_records.values())
 		print('Detected %d instances in %d detections' % (n_detection, len(timestamp_records)))

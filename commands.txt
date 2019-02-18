@@ -23,8 +23,8 @@ python train_imgreid_xent.py \
 
 ---------------------------detect-----------------------------------------------------
 python detect_video.py \
--s /home/zydq/Datasets/zydq-reid-video/ \
--t /home/zydq/Datasets/reid/zydq/detections_half/ \
+-s /home/zydq/Datasets/zydq-reid-video2/ \
+-t /home/zydq/Datasets/reid/zydq/detections_half2/ \
 --cfg-path ./demo/yolo/cfg/yolov3.cfg \
 --weight-path ./demo/yolo/weights/yolov3.weights \
 --names-path ./demo/yolo/data/coco.names \
@@ -54,3 +54,7 @@ python train_imgreid_xent_htri.py \
 2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_312_3.png
 2号楼电梯口_2号一楼大厅_20190107165934_20190107171123_1218783_316_2.png
 2号楼电梯口_2号一楼大厅_20190107121913_20190107124511_1198772_176_0.png
+
+
+
+20190101000000-20190105235959/牧野机床设备_1号楼东面通道门口球机_20190101000006_20190101015843_9410445.mp4 177900/177949 7392 7433 0

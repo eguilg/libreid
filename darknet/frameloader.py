@@ -1,5 +1,5 @@
 import cv2
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, dataloader
 from torchvision import transforms
 
 
@@ -51,12 +51,20 @@ class VideoDataset(Dataset):
 					out_frame_org = frame
 				self._curr_frame_count += 1
 			else:
+				self.frame_count = self._curr_frame_count
 				break
 		if self._transform is not None:
-			out_frame = self._transform(out_frame_org)
+			if out_frame_org is not None:
+				out_frame = self._transform(out_frame_org)
+			else:
+				out_frame = out_frame_org
 			return time_stamp, out_frame_org, out_frame
 		else:
 			return time_stamp, out_frame_org
 
 	def __len__(self):
-		return (self.frame_count - 10) // self._frame_interval
+		return (self.frame_count) // self._frame_interval
+
+def my_collate(batch):
+    batch = list(filter(lambda x: x[1] is not None, batch))
+    return dataloader.default_collate(batch)
