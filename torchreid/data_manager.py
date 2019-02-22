@@ -96,8 +96,9 @@ class ImageDataManager(BaseDataManager):
             self.trainloader = DataLoader(
                 ImageDataset(self.train, transform=transform_train),
                 sampler=RandomIdentitySampler(self.train, self.train_batch_size, self.num_instances),
-                batch_size=self.train_batch_size, shuffle=False, num_workers=self.workers,
-                pin_memory=self.use_gpu, drop_last=True
+                batch_size=self.train_batch_size, shuffle=False, drop_last=True,
+                num_workers=self.workers,
+                pin_memory=self.use_gpu
             )
         
         else:
