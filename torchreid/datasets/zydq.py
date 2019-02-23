@@ -104,7 +104,7 @@ class ZYDQ_Labeled(BaseImageDataset):
 	"""
 	dataset_dir = 'zydq'
 
-	def __init__(self, root='data', verbose=True, upsample=64, **kwargs):
+	def __init__(self, root='data', verbose=True, upsample=128, **kwargs):
 		super(ZYDQ_Labeled, self).__init__()
 		self.dataset_dir = osp.join(root, self.dataset_dir)
 		self.upsample = upsample

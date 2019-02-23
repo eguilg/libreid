@@ -9,29 +9,43 @@ python detect_video.py \
 --file-filters .mp4 \
 --half \
 
----------------------------------------------reid_train_xent+htri----------------------------------------
+---------------------------------------------reid_res_train_xent+htri----------------------------------------
 python train_imgreid_xent_htri.py \
 --root /home/zydq/Datasets/reid \
--s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids zydq_labeled \
--t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids sensereid \
+-s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids msmt17 zydq_labeled \
+-t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids msmt17 sensereid \
 -a se_resnet50_fc512 \
 --train-sampler RandomIdentitySampler \
 --label-smooth \
 --train-batch-size 64 \
 --eval-freq 3 \
---save-dir log/se-resnet50-all-xent-htri-zydq \
+--save-dir log/se-resnet50-fc512-xent-htri-10-zydq \
 --gpu-devices 0 \
 
----------------------------------------------reid_train_xent---------------------------------------------
+---------------------------------------------reid_res_train_xent---------------------------------------------
 python train_imgreid_xent.py \
 --root /home/zydq/Datasets/reid \
--s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids zydq_labeled\
--t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids sensereid \
+-s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids msmt17 zydq_labeled \
+-t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids msmt17 sensereid \
 -a se_resnet50_fc512 \
 --label-smooth \
 --train-batch-size 64 \
 --eval-freq 3 \
---save-dir log/se-resnet50-all-xent-zydq \
+--save-dir log/se-resnet50-fc512-xent-10-zydq \
+--gpu-devices 0 \
+
+---------------------------------------------reid_hacnn_train_xent---------------------------------------------
+python train_imgreid_xent.py \
+--root /home/zydq/Datasets/reid \
+-s market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids msmt17 zydq_labeled \
+-t market1501 cuhk03 dukemtmcreid viper grid cuhk01 prid450s ilids msmt17 sensereid \
+-a hacnn \
+--label-smooth \
+--height 160 \
+--width 64 \
+--train-batch-size 64 \
+--eval-freq 3 \
+--save-dir log/hacnn-xent-10-zydq \
 --gpu-devices 0 \
 
 ---------------------------------reid_eval--------------------------------------------------
@@ -43,8 +57,8 @@ python train_imgreid_xent_htri.py \
 -t zydq \
 -a se_resnet50_fc512 \
 --test-batch-size 100 \
---save-dir log/se-resnet50-all-xent-htri \
---load-weights log/se-resnet50-all-xent-htri/checkpoint_ep60.pth.tar \
+--save-dir log/se-resnet50-fc512-xent-htri \
+--load-weights log/se-resnet50-fc512-xent-htri/checkpoint_ep60.pth.tar \
 --gpu-devices 0 \
 
 
